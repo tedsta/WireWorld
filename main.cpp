@@ -167,8 +167,13 @@ class Grid
 
 int main()
 {
+    std::cout << "Wireworld Simulator\n";
+    std::cout << "Theodore DeRego\n";
+    std::cout << "CS 321 @ UH Hilo\n";
+    std::cout << "Spring 2014\n\n";
+
     sf::RenderWindow window;
-    window.create(sf::VideoMode(800, 608), "Wire World");
+    window.create(sf::VideoMode(800, 608), "Wireworld Simulator");
 
     std::ifstream file("primes.wi");
     int width = 0;
@@ -177,7 +182,6 @@ int main()
     // First load grid dims and create grid
     file >> width >> height;
     Grid grid(width, height);
-    bool paused = false;
 
     // Now load the data
     for (int y = 0; y < height; y++)
@@ -199,11 +203,24 @@ int main()
     file.close();
 
     sf::Clock clock;
+    float dtAccum = 0.f;
+    int frames = 0;
     sf::View view;
+    bool paused = false;
+    bool render = true;
     while (window.isOpen())
     {
         // Get delta time
         float dt = clock.restart().asSeconds();
+        dtAccum += dt;
+
+        if (dtAccum >= 1.f)
+        {
+            std::cout << frames << std::endl;
+            dtAccum = 0.f;
+            frames = 0;
+        }
+        frames++;
 
         // Grab all of the events!!!
         sf::Event event;
@@ -214,7 +231,12 @@ int main()
             else if (event.type == sf::Event::KeyPressed)
             {
                 if (event.key.code == sf::Keyboard::Space)
-                    paused = !paused;
+                {
+                    if (event.key.shift)
+                        render = !render;
+                    else
+                        paused = !paused;
+                }
             }
         }
 
@@ -270,7 +292,8 @@ int main()
         window.setView(view);
         window.clear(sf::Color::Black);
 
-        grid.draw(window);
+        if (render)
+            grid.draw(window);
 
         // end the current frame
         window.display();
