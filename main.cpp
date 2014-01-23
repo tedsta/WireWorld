@@ -98,12 +98,12 @@ class Grid
         // Set the next state to the current state
         void flip()
         {
-            for (int x = 0; x < mWidth; x++)
+            for (auto& pos : mInteresting)
             {
-                for (int y = 0; y < mHeight; y++)
-                {
-                    mCells[y*mWidth + x].current = mCells[y*mWidth + x].next;
-                }
+                int x = pos.x;
+                int y = pos.y;
+
+                mCells[y*mWidth + x].current = mCells[y*mWidth + x].next;
             }
         }
 
@@ -114,6 +114,9 @@ class Grid
 
         void setCell(int x, int y, int cell)
         {
+            if (x < 0 || y < 0 || x >= mWidth || y >= mHeight)
+                return;
+
             if (mCells[y*mWidth + x].next == 0 && cell != 0)
                 mInteresting.push_back(sf::Vector2i(x, y));
             mCells[y*mWidth + x].next = cell;
