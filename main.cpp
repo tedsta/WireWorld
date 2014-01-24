@@ -7,6 +7,8 @@
 
 #define TILE_SIZE 16
 
+sf::View view;
+
 class Grid
 {
     public:
@@ -68,10 +70,15 @@ class Grid
 
         void draw(sf::RenderTarget& target, sf::RenderStates states = sf::RenderStates::Default)
         {
+            sf::FloatRect viewRect(view.getCenter().x-view.getSize().x/2, view.getCenter().y-view.getSize().y/2, view.getSize().x, view.getSize().y);
+
             for (auto& pos : mInteresting)
             {
                 int x = pos.x;
                 int y = pos.y;
+
+                if (!viewRect.intersects(sf::FloatRect(x*TILE_SIZE, y*TILE_SIZE, (x+1)*TILE_SIZE, (y+1)*TILE_SIZE)))
+                    continue;
 
                 mRect.setPosition(x*TILE_SIZE, y*TILE_SIZE);
 
@@ -205,7 +212,6 @@ int main()
     sf::Clock clock;
     float dtAccum = 0.f;
     int frames = 0;
-    sf::View view;
     bool paused = false;
     bool render = true;
     while (window.isOpen())
