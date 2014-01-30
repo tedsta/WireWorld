@@ -7,12 +7,22 @@
 
 #define TILE_SIZE 16
 
+enum CellState
+{
+    NONE,
+    WIRE,
+    HEAD,
+    TAIL
+};
+
 sf::View view;
 
+/// \brief Represents a wireworld grid. Responsible for maintaining, updating, and rendering the
+/// current state. Also, this representation of wireworld wraps both vertically and horizontally.
 class Grid
 {
     public:
-        Grid(int width, int height) : mWidth(width), mHeight(height), mCells(mWidth*mHeight, Cell{0, 0}),
+        Grid(int width, int height) : mWidth(width), mHeight(height), mCells(mWidth*mHeight, Cell{NONE, NONE}),
             mRect(sf::Vector2f(TILE_SIZE, TILE_SIZE))
         {
         }
@@ -21,6 +31,7 @@ class Grid
         {
         }
 
+        /// \brief Update the grid
         void update()
         {
             for (auto& pos : mInteresting)
@@ -32,42 +43,43 @@ class Grid
 
                 switch (cell)
                 {
-                    case 1: // wire logic
+                    case WIRE: // wire logic
                     {
                         int neighbors = 0; // Number of neighbor electron heads
 
-                        if (getCell(wrapX(x-1), wrapY(y-1)) == 2) neighbors++; // top left
-                        if (getCell(x, wrapY(y-1)) == 2) neighbors++; // top mid
-                        if (getCell(wrapX(x+1), wrapY(y-1)) == 2) neighbors++; // top right
+                        if (getCell(wrapX(x-1), wrapY(y-1)) == HEAD) neighbors++; // top left
+                        if (getCell(x, wrapY(y-1)) == HEAD) neighbors++; // top mid
+                        if (getCell(wrapX(x+1), wrapY(y-1)) == HEAD) neighbors++; // top right
 
-                        if (getCell(wrapX(x-1), y) == 2) neighbors++; // mid left
-                        if (getCell(wrapX(x+1), y) == 2) neighbors++; // mid right
+                        if (getCell(wrapX(x-1), y) == HEAD) neighbors++; // mid left
+                        if (getCell(wrapX(x+1), y) == HEAD) neighbors++; // mid right
 
-                        if (getCell(wrapX(x-1), wrapY(y+1)) == 2) neighbors++; // bot left
-                        if (getCell(x, wrapY(y+1)) == 2) neighbors++; // bot mid
-                        if (getCell(wrapX(x+1), wrapY(y+1)) == 2) neighbors++; // bot right
+                        if (getCell(wrapX(x-1), wrapY(y+1)) == HEAD) neighbors++; // bot left
+                        if (getCell(x, wrapY(y+1)) == HEAD) neighbors++; // bot mid
+                        if (getCell(wrapX(x+1), wrapY(y+1)) == HEAD) neighbors++; // bot right
 
                         if (neighbors == 1 || neighbors == 2)
-                            setCell(x, y, 2); // becomes electron head
+                            setCell(x, y, HEAD); // becomes electron head
 
                         break;
                     }
 
-                    case 2: // electron head logic
+                    case HEAD: // electron head logic
                     {
-                        setCell(x, y, 3);
+                        setCell(x, y, TAIL);
                         break;
                     }
 
-                    case 3: // electron tail logic
+                    case TAIL: // electron tail logic
                     {
-                        setCell(x, y, 1);
+                        setCell(x, y, WIRE);
                         break;
                     }
                 }
             }
         }
 
+        /// \brief Draw the grid
         void draw(sf::RenderTarget& target, sf::RenderStates states = sf::RenderStates::Default)
         {
             sf::FloatRect viewRect(view.getCenter().x-view.getSize().x/2, view.getCenter().y-view.getSize().y/2, view.getSize().x, view.getSize().y);
@@ -84,16 +96,16 @@ class Grid
 
                 switch (getCell(x, y))
                 {
-                case 0: // Air
+                case NONE: // Air
                     mRect.setFillColor(sf::Color::Black);
                     break;
-                case 1: // Wire
+                case WIRE: // Wire
                     mRect.setFillColor(sf::Color::Yellow);
                     break;
-                case 2: // Electron head
+                case HEAD: // Electron head
                     mRect.setFillColor(sf::Color::Blue);
                     break;
-                case 3: // Electron tail
+                case TAIL: // Electron tail
                     mRect.setFillColor(sf::Color::Red);
                     break;
                 }
@@ -102,7 +114,7 @@ class Grid
             }
         }
 
-        // Set the next state to the current state
+        /// \brief Set the next state to the current state
         void flip()
         {
             for (auto& pos : mInteresting)
@@ -114,12 +126,14 @@ class Grid
             }
         }
 
-        int getCell(int x, int y) const
+        /// \brief Get the contents of a cell
+        CellState getCell(int x, int y) const
         {
             return mCells[y*mWidth + x].current;
         }
 
-        void setCell(int x, int y, int cell)
+        /// \brief Set the contents of a cell.
+        void setCell(int x, int y, CellState cell)
         {
             if (x < 0 || y < 0 || x >= mWidth || y >= mHeight)
                 return;
@@ -129,6 +143,7 @@ class Grid
             mCells[y*mWidth + x].next = cell;
         }
 
+        /// \brief Compute the wrapped x coordinate
         int wrapX(int x) const
         {
             if (x < 0)
@@ -143,6 +158,7 @@ class Grid
             return x;
         }
 
+        /// \brief Compute the wrapped y coordinate.
         int wrapY(int y) const
         {
             if (y < 0)
@@ -160,8 +176,8 @@ class Grid
     private:
         struct Cell
         {
-            int current;
-            int next;
+            CellState current;
+            CellState next;
         };
 
         int mWidth;
@@ -197,13 +213,13 @@ int main()
         {
             char c = file.get();
             if (c == ' ')
-                grid.setCell(x, y, 0);
+                grid.setCell(x, y, NONE);
             else if (c == '#')
-                grid.setCell(x, y, 1);
+                grid.setCell(x, y, WIRE);
             else if (c == '@')
-                grid.setCell(x, y, 2);
+                grid.setCell(x, y, HEAD);
             else if (c == '~')
-                grid.setCell(x, y, 3);
+                grid.setCell(x, y, TAIL);
         }
         file.get(); // skip the new line
     }
@@ -258,9 +274,9 @@ int main()
             int gridY = mousePos.y/TILE_SIZE;
 
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift))
-                grid.setCell(gridX, gridY, 3);
+                grid.setCell(gridX, gridY, TAIL);
             else
-                grid.setCell(gridX, gridY, 2);
+                grid.setCell(gridX, gridY, HEAD);
         }
 
         // Right mouse to place a wire
@@ -272,9 +288,9 @@ int main()
             int gridY = mousePos.y/TILE_SIZE;
 
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift))
-                grid.setCell(gridX, gridY, 0);
+                grid.setCell(gridX, gridY, NONE);
             else
-                grid.setCell(gridX, gridY, 1);
+                grid.setCell(gridX, gridY, WIRE);
         }
 
         // Move the camera
